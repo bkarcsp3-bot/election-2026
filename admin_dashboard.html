@@ -1,0 +1,314 @@
+{% extends "base.html" %}
+{% block title %}لوحة المندوب البلدي - الغيابات ونسب المشاركة{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+    <div>
+        <h4 class="fw-bold mb-0" style="color:#0f2942;">لوحة المندوب البلدي — بلدية الخيثر</h4>
+        <small class="text-muted">متابعة الغيابات ونسب المشاركة والأرقام المحجوزة ليوم الاقتراع 28 نوفمبر 2026</small>
+    </div>
+    <div class="d-flex flex-wrap gap-2">
+        <a href="{{ url_for('admin_dashboard', tab=active_tab, center_id=center_filter) }}" class="btn btn-outline-secondary btn-sm fw-bold">تحديث ↻</a>
+        <a href="{{ url_for('export_absences_csv') }}" class="btn btn-success btn-sm fw-bold">تحميل تقرير الغيابات</a>
+        <a href="{{ url_for('export_turnout_csv') }}" class="btn btn-gov-primary btn-sm">تحميل تقرير نسب المشاركة</a>
+        <button type="button" class="btn btn-outline-danger btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#resetDataModal">
+            تصفير البيانات (إعادة من الصفر)
+        </button>
+    </div>
+</div>
+
+<ul class="nav nav-pills mb-4 gap-2">
+    <li class="nav-item">
+        <a class="nav-link fw-bold {% if active_tab == 'absences' %}active{% endif %}"
+           {% if active_tab == 'absences' %}style="background-color:#0f2942;"{% endif %}
+           href="{{ url_for('admin_dashboard', tab='absences', center_id=center_filter) }}">
+            تقرير الغيابات
+        </a>
+    </li>
+    <li class="nav-item">
+        <a class="nav-link fw-bold {% if active_tab == 'turnout' %}active{% endif %}"
+           {% if active_tab == 'turnout' %}style="background-color:#0f2942;"{% endif %}
+           href="{{ url_for('admin_dashboard', tab='turnout', center_id=center_filter) }}">
+            نسب المشاركة والأرقام المحجوزة (09:30 / 14:00 / 17:00 / 19:00)
+        </a>
+    </li>
+</ul>
+
+{% if active_tab == 'absences' %}
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card p-3 text-center">
+            <span class="text-muted small fw-bold">إجمالي المؤطرين بالبلدية</span>
+            <h2 class="fw-bold mb-0 mt-1" style="color:#0f2942;">{{ totals.total }}</h2>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card p-3 text-center" style="border-top-color:#16a34a;">
+            <span class="text-muted small fw-bold">إجمالي الحاضرين</span>
+            <h2 class="fw-bold mb-0 mt-1 text-success">{{ totals.present_count }}</h2>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card p-3 text-center" style="border-top-color:#dc2626;">
+            <span class="text-muted small fw-bold">إجمالي الغائبين</span>
+            <h2 class="fw-bold mb-0 mt-1 text-danger">{{ totals.absent_count }}</h2>
+        </div>
+    </div>
+</div>
+
+<div class="card p-3 mb-4">
+    <h5 class="fw-bold mb-3" style="color:#0f2942;">وضعية الحضور والغياب حسب مراكز التصويت</h5>
+    <div class="table-responsive">
+        <table class="table table-bordered text-center align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>المركز</th>
+                    <th>العدد الكلي</th>
+                    <th>الحاضرون</th>
+                    <th>الغائبون</th>
+                    <th>نسبة الحضور</th>
+                    <th>تصفية التقرير</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in summary %}
+                <tr>
+                    <td class="fw-bold text-end">{{ row.center_name }}</td>
+                    <td>{{ row.total }}</td>
+                    <td class="text-success fw-bold">{{ row.present_count }}</td>
+                    <td class="text-danger fw-bold">{{ row.absent_count }}</td>
+                    <td>{{ "%.1f"|format((row.present_count / row.total * 100) if row.total else 0) }}%</td>
+                    <td>
+                        <a href="{{ url_for('admin_dashboard', tab='absences', center_id=row.center_id) }}" class="btn btn-sm btn-outline-dark">عرض غيابات المركز</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card p-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold text-danger mb-0">قائمة الغائبين المسجلين ({{ absentees|length }})</h5>
+        {% if center_filter != 'all' %}
+        <a href="{{ url_for('admin_dashboard', tab='absences') }}" class="btn btn-sm btn-secondary">عرض كل المراكز</a>
+        {% endif %}
+    </div>
+
+    {% if absentees %}
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>المركز</th>
+                    <th>المكتب</th>
+                    <th>نوع القائمة</th>
+                    <th>المهمة</th>
+                    <th>اللقب والاسم</th>
+                    <th>سبب الغياب</th>
+                    <th>المستخلف</th>
+                    <th>وقت التبليغ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in absentees %}
+                <tr>
+                    <td class="fw-bold">{{ a.center_name }}</td>
+                    <td>{{ a.office_name }}</td>
+                    <td>{{ a.list_type }}</td>
+                    <td>{{ a.role_title }}</td>
+                    <td><strong>{{ a.last_name_ar }} {{ a.first_name_ar }}</strong></td>
+                    <td>{{ a.absence_reason or '-' }}</td>
+                    <td class="text-primary fw-bold">{{ a.replacement_name or 'لم يعين بعد' }}</td>
+                    <td class="small text-muted">{{ a.updated_at }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="alert alert-success mb-0 text-center">لا يوجد أي غياب مسجل حالياً في المراكز المحددة.</div>
+    {% endif %}
+</div>
+
+{% else %}
+<!-- مؤشر متابعة البلاغات لكل فترة -->
+<div class="card p-3 mb-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="fw-bold small" style="color:#0f2942;">مؤشر استلام الأرقام من المكاتب ({{ turnout_overall.offices_count }} مكتب):</span>
+        <div class="d-flex flex-wrap gap-2 small">
+            <span class="badge bg-primary">09:30 — تم إدخال {{ turnout_overall.reported_0930 }} / {{ turnout_overall.offices_count }}</span>
+            <span class="badge bg-info text-dark">14:00 — تم إدخال {{ turnout_overall.reported_1400 }} / {{ turnout_overall.offices_count }}</span>
+            <span class="badge bg-warning text-dark">17:00 — تم إدخال {{ turnout_overall.reported_1700 }} / {{ turnout_overall.offices_count }}</span>
+            <span class="badge bg-success">19:00 — تم إدخال {{ turnout_overall.reported_1900 }} / {{ turnout_overall.offices_count }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-2">
+        <div class="card stat-card gold-accent p-3 text-center">
+            <span class="text-muted small fw-bold">العدد المسجل (المحجوز)</span>
+            <h3 class="fw-bold mb-0 mt-1 text-dark">{{ turnout_overall.registered_voters }}</h3>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card p-3 text-center">
+            <span class="text-muted small fw-bold">09:30</span>
+            <h4 class="fw-bold mb-0 mt-1 text-primary">{{ turnout_overall.voters_0930 }}</h4>
+            <small class="fw-bold text-primary">{% if turnout_overall.pct_0930 is not none %}{{ turnout_overall.pct_0930 }}%{% else %}-{% endif %}</small>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card p-3 text-center" style="border-top-color:#0ea5e9;">
+            <span class="text-muted small fw-bold">14:00</span>
+            <h4 class="fw-bold mb-0 mt-1 text-info">{{ turnout_overall.voters_1400 }}</h4>
+            <small class="fw-bold text-info">{% if turnout_overall.pct_1400 is not none %}{{ turnout_overall.pct_1400 }}%{% else %}-{% endif %}</small>
+        </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card stat-card gold-accent p-3 text-center">
+            <span class="text-muted small fw-bold">17:00</span>
+            <h4 class="fw-bold mb-0 mt-1 text-warning">{{ turnout_overall.voters_1700 }}</h4>
+            <small class="fw-bold text-warning">{% if turnout_overall.pct_1700 is not none %}{{ turnout_overall.pct_1700 }}%{% else %}-{% endif %}</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card p-3 text-center" style="border-top-color:#16a34a;">
+            <span class="text-muted small fw-bold">19:00 (النهائية)</span>
+            <h4 class="fw-bold mb-0 mt-1 text-success">{{ turnout_overall.voters_1900 }}</h4>
+            <small class="fw-bold text-success">{% if turnout_overall.pct_1900 is not none %}نسبة المشاركة: {{ turnout_overall.pct_1900 }}%{% else %}أدخل العدد المسجل لحساب النسبة{% endif %}</small>
+        </div>
+    </div>
+</div>
+
+<div class="card p-3 mb-4">
+    <h5 class="fw-bold mb-3" style="color:#0f2942;">ملخص نسب المشاركة حسب مراكز التصويت</h5>
+    <div class="table-responsive">
+        <table class="table table-bordered text-center align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th class="text-end">المركز</th>
+                    <th>العدد المسجل (المحجوز)</th>
+                    <th>09:30 (عدد / نسبة)</th>
+                    <th>14:00 (عدد / نسبة)</th>
+                    <th>17:00 (عدد / نسبة)</th>
+                    <th>19:00 (عدد / نسبة)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cs in center_turnout_summary %}
+                <tr>
+                    <td class="fw-bold text-end">{{ cs.center_name }}</td>
+                    <td class="fw-bold">{{ cs.registered_voters }}</td>
+                    <td>{{ cs.voters_0930 }} {% if cs.pct_0930 is not none %}<span class="badge bg-primary">{{ cs.pct_0930 }}%</span>{% endif %}</td>
+                    <td>{{ cs.voters_1400 }} {% if cs.pct_1400 is not none %}<span class="badge bg-info text-dark">{{ cs.pct_1400 }}%</span>{% endif %}</td>
+                    <td>{{ cs.voters_1700 }} {% if cs.pct_1700 is not none %}<span class="badge bg-warning text-dark">{{ cs.pct_1700 }}%</span>{% endif %}</td>
+                    <td>{{ cs.voters_1900 }} {% if cs.pct_1900 is not none %}<span class="badge bg-success">{{ cs.pct_1900 }}%</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card p-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h5 class="fw-bold mb-0" style="color:#0f2942;">تفاصيل المصوتين والنسب حسب كل مكتب</h5>
+        <form method="GET" class="d-flex gap-2 align-items-center">
+            <input type="hidden" name="tab" value="turnout">
+            <select name="center_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option value="all" {% if center_filter == 'all' %}selected{% endif %}>جميع المراكز الخمسة</option>
+                {% for cs in center_turnout_summary %}
+                <option value="{{ cs.center_id }}" {% if center_filter == cs.center_id|string %}selected{% endif %}>{{ cs.center_name }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover table-bordered text-center align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th class="text-end">المركز</th>
+                    <th class="text-end">المكتب</th>
+                    <th>العدد المسجل<br><small>(الرقم المحجوز)</small></th>
+                    <th>09:30</th>
+                    <th>14:00</th>
+                    <th>17:00</th>
+                    <th>19:00</th>
+                    <th>آخر تحديث</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in turnout_offices %}
+                <tr>
+                    <td class="text-end fw-bold">{{ item.center_name }}</td>
+                    <td class="text-end fw-bold">{{ item.office_name }}</td>
+                    <td>
+                        <form method="POST" action="{{ url_for('update_registered_voters', turnout_id=item.id) }}" class="d-flex justify-content-center gap-1">
+                            <input type="hidden" name="current_center_filter" value="{{ center_filter }}">
+                            <input type="number" min="0" name="registered_voters" value="{{ item.registered_voters }}"
+                                   class="form-control form-control-sm text-center" style="width:90px;">
+                            <button type="submit" class="btn btn-sm btn-dark">حفظ</button>
+                        </form>
+                    </td>
+                    <td>
+                        <div class="fw-bold">{{ item.voters_0930 }}</div>
+                        {% if item.pct_0930 is not none %}<span class="badge bg-primary">{{ item.pct_0930 }}%</span>{% else %}<small class="text-muted">-</small>{% endif %}
+                    </td>
+                    <td>
+                        <div class="fw-bold">{{ item.voters_1400 }}</div>
+                        {% if item.pct_1400 is not none %}<span class="badge bg-info text-dark">{{ item.pct_1400 }}%</span>{% else %}<small class="text-muted">-</small>{% endif %}
+                    </td>
+                    <td>
+                        <div class="fw-bold">{{ item.voters_1700 }}</div>
+                        {% if item.pct_1700 is not none %}<span class="badge bg-warning text-dark">{{ item.pct_1700 }}%</span>{% else %}<small class="text-muted">-</small>{% endif %}
+                    </td>
+                    <td>
+                        <div class="fw-bold">{{ item.voters_1900 }}</div>
+                        {% if item.pct_1900 is not none %}<span class="badge bg-success">{{ item.pct_1900 }}%</span>{% else %}<small class="text-muted">-</small>{% endif %}
+                    </td>
+                    <td class="small text-muted">{{ item.updated_at or '-' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<div class="modal fade" id="resetDataModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="POST" action="{{ url_for('reset_all_data') }}">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold">تحذير: إعادة ضبط البيانات من الصفر</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <strong>تنبيه:</strong> يمكنك تصفير الغيابات فقط، أو تصفير عدادات المصوتين فقط، أو تصفير الكل معاً. (العدد المسجل / الرقم المحجوز يبقى محفوظاً).
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">اختر نطاق التصفير:</label>
+                        <select name="reset_scope" class="form-select">
+                            <option value="all" selected>تصفير الغيابات وعدادات المصوتين معاً</option>
+                            <option value="absences">تصفير الغيابات فقط</option>
+                            <option value="turnout">تصفير عدادات المصوتين فقط</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">أدخل كلمة مرور المندوب البلدي للتأكيد:</label>
+                        <input type="password" name="confirm_password" class="form-control" placeholder="أدخل كلمة المرور" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="submit" class="btn btn-danger fw-bold">تأكيد وتصفير</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

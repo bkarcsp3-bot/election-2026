@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}نظام المتابعة الانتخابية - بلدية الخيثر{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gov-navy: #0f2942;
+            --gov-navy-dark: #091a2b;
+            --gov-gold: #c5963a;
+            --gov-gold-light: #f5ebd4;
+            --gov-bg: #f1f5f9;
+            --gov-card: #ffffff;
+            --gov-border: #e2e8f0;
+            --gov-text: #1e293b;
+        }
+        body {
+            font-family: 'Cairo', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(180deg, #e9eff5 0%, var(--gov-bg) 240px);
+            color: var(--gov-text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .navbar-gov {
+            background: linear-gradient(135deg, var(--gov-navy-dark) 0%, var(--gov-navy) 100%);
+            border-bottom: 3px solid var(--gov-gold);
+            box-shadow: 0 4px 18px rgba(9, 26, 43, 0.16);
+            padding-top: 0.65rem;
+            padding-bottom: 0.65rem;
+        }
+        .brand-logo-wrap {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(197, 150, 58, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 3px;
+            flex-shrink: 0;
+        }
+        .brand-logo-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .brand-title {
+            font-weight: 800;
+            font-size: 1.05rem;
+            line-height: 1.25;
+            color: #ffffff;
+        }
+        .brand-subtitle {
+            font-size: 0.78rem;
+            color: var(--gov-gold-light);
+            font-weight: 600;
+        }
+        .card {
+            border: 1px solid var(--gov-border);
+            border-radius: 14px;
+            background-color: var(--gov-card);
+            box-shadow: 0 4px 16px rgba(15, 41, 66, 0.05);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .stat-card {
+            border-top: 4px solid var(--gov-navy);
+        }
+        .stat-card.gold-accent {
+            border-top-color: var(--gov-gold);
+        }
+        .badge-present {
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+            font-weight: 700;
+            padding: 0.35em 0.75em;
+            border-radius: 999px;
+        }
+        .badge-absent {
+            background-color: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+            font-weight: 700;
+            padding: 0.35em 0.75em;
+            border-radius: 999px;
+        }
+        .row-absent {
+            background-color: #fff5f5 !important;
+        }
+        .btn-gov-primary {
+            background: linear-gradient(135deg, var(--gov-navy) 0%, #19426b 100%);
+            color: #fff;
+            border: none;
+            font-weight: 700;
+        }
+        .btn-gov-primary:hover {
+            background: linear-gradient(135deg, var(--gov-navy-dark) 0%, var(--gov-navy) 100%);
+            color: #fff;
+        }
+        .btn-gov-gold {
+            background: linear-gradient(135deg, #d1a347 0%, var(--gov-gold) 100%);
+            color: #091a2b;
+            border: none;
+            font-weight: 700;
+        }
+        .btn-gov-gold:hover {
+            filter: brightness(0.96);
+            color: #091a2b;
+        }
+        .table thead th {
+            font-weight: 700;
+            font-size: 0.9rem;
+            white-space: nowrap;
+        }
+        .footer-gov {
+            margin-top: auto;
+            background-color: #ffffff;
+            border-top: 1px solid var(--gov-border);
+            padding: 1rem 0;
+            font-size: 0.85rem;
+            color: #64748b;
+        }
+        .alert-warning-soft {
+            background-color: #fffbeb;
+            border: 1px solid #fde68a;
+            color: #92400e;
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark navbar-gov mb-4">
+    <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-3 m-0" href="{{ url_for('login') }}">
+            <div class="brand-logo-wrap">
+                <img src="{{ url_for('static', filename='img/authority_logo.svg') }}" alt="شعار السلطة">
+            </div>
+            <div>
+                <div class="brand-title">السلطة الوطنية المستقلة للانتخابات — بلدية الخيثر</div>
+                <div class="brand-subtitle">متابعة الغيابات ونسب المشاركة • يوم الاقتراع 28 نوفمبر 2026</div>
+            </div>
+        </a>
+        {% if session.get('title') %}
+        <div class="d-flex align-items-center gap-2 flex-wrap mt-2 mt-lg-0">
+            <span class="badge bg-light text-dark px-3 py-2 fw-bold">{{ session.get('title') }}</span>
+            <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm fw-bold px-3">خروج</a>
+        </div>
+        {% endif %}
+    </div>
+</nav>
+
+<div class="container pb-4">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</div>
+
+<footer class="footer-gov text-center">
+    <div class="container">
+        <span>نظام المتابعة الانتخابية الرقمي — بلدية الخيثر • 28 نوفمبر 2026</span>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

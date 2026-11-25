@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% block title %}{{ center.center_name }} - متابعة المركز{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <h4 class="fw-bold mb-1" style="color:#0f2942;">مركز التصويت: {{ center.center_name }}</h4>
+        <small class="text-muted">متابعة مؤطري المركز ومكاتبه وأعداد المصوتين — يوم الاقتراع 28 نوفمبر 2026</small>
+    </div>
+
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('center_dashboard', view='absences') }}"
+           class="btn px-4 py-2 {% if active_view == 'absences' %}btn-gov-primary{% else %}btn-outline-secondary fw-bold{% endif %}">
+            اختيار الغيابات
+        </a>
+        <a href="{{ url_for('center_dashboard', view='turnout') }}"
+           class="btn px-4 py-2 {% if active_view == 'turnout' %}btn-gov-gold{% else %}btn-outline-warning fw-bold text-dark{% endif %}">
+            نسبة المشاركة
+        </a>
+    </div>
+</div>
+
+{% if active_view == 'absences' %}
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card stat-card p-3 text-center">
+            <span class="text-muted small fw-bold">إجمالي مؤطري المركز والمكاتب</span>
+            <h2 class="fw-bold mb-0 mt-1" style="color:#0f2942;">{{ stats.total }}</h2>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card p-3 text-center" style="border-top-color:#16a34a;">
+            <span class="text-muted small fw-bold">الحاضرون</span>
+            <h2 class="fw-bold mb-0 mt-1 text-success">{{ stats.present_count }}</h2>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stat-card p-3 text-center" style="border-top-color:#dc2626;">
+            <span class="text-muted small fw-bold">الغائبون (المبلغ عنهم)</span>
+            <h2 class="fw-bold mb-0 mt-1 text-danger">{{ stats.absent_count }}</h2>
+        </div>
+    </div>
+</div>
+
+<div class="card p-3 mb-4">
+    <form method="GET" class="row g-2 align-items-end">
+        <input type="hidden" name="view" value="absences">
+        <div class="col-md-4">
+            <label class="form-label small fw-bold">المكتب / إدارة المركز:</label>
+            <select name="office" class="form-select">
+                <option value="all" {% if office_filter == 'all' %}selected{% endif %}>جميع المكاتب وإدارة المركز</option>
+                {% for off in offices %}
+                <option value="{{ off.office_name }}" {% if office_filter == off.office_name %}selected{% endif %}>{{ off.office_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-bold">الوضعية:</label>
+            <select name="status" class="form-select">
+                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>الكل</option>
+                <option value="حاضر" {% if status_filter == 'حاضر' %}selected{% endif %}>حاضر فقط</option>
+                <option value="غائب" {% if status_filter == 'غائب' %}selected{% endif %}>غائب فقط</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-bold">بحث بالاسم أو اللقب:</label>
+            <input type="text" name="q" value="{{ search_q }}" class="form-control" placeholder="اكتب اللقب أو الاسم...">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-gov-primary w-100">بحث / تصفية</button>
+        </div>
+    </form>
+</div>
+
+<div class="card p-3">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>المكتب / المركز</th>
+                    <th>القائمة</th>
+                    <th>المهمة</th>
+                    <th>اللقب والاسم</th>
+                    <th>تاريخ الميلاد</th>
+                    <th>الوضعية</th>
+                    <th>ملاحظات / المستخلف</th>
+                    <th class="text-center">الإجراء</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in staff_list %}
+                <tr class="{% if s.status == 'غائب' %}row-absent{% endif %}">
+                    <td class="fw-bold">{{ s.office_name }}</td>
+                    <td><span class="badge bg-secondary">{{ s.list_type }}</span></td>
+                    <td>{{ s.role_title }}</td>
+                    <td>
+                        <strong>{{ s.last_name_ar }} {{ s.first_name_ar }}</strong><br>
+                        <small class="text-muted">{{ s.nom_fr }} {{ s.prenom_fr }}</small>
+                    </td>
+                    <td>{{ s.birth_date }}</td>
+                    <td>
+                        {% if s.status == 'حاضر' %}
+                            <span class="badge badge-present">حاضر</span>
+                        {% else %}
+                            <span class="badge badge-absent">غائب</span>
+                        {% endif %}
+                    </td>
+                    <td class="small">
+                        {% if s.status == 'غائب' %}
+                            {% if s.absence_reason %}<div><strong>السبب:</strong> {{ s.absence_reason }}</div>{% endif %}
+                            {% if s.replacement_name %}<div><strong>المستخلف:</strong> {{ s.replacement_name }}</div>{% endif %}
+                            <div class="text-muted">{{ s.updated_at }}</div>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        {% if s.status == 'حاضر' %}
+                            <button class="btn btn-danger btn-sm fw-bold" data-bs-toggle="modal" data-bs-target="#absentModal{{ s.id }}">
+                                تسجيل غياب
+                            </button>
+                        {% else %}
+                            <form method="POST" action="{{ url_for('toggle_status', staff_id=s.id) }}" class="d-inline">
+                                <input type="hidden" name="status" value="حاضر">
+                                <input type="hidden" name="current_office" value="{{ office_filter }}">
+                                <button type="submit" class="btn btn-success btn-sm fw-bold">إلغاء الغياب (حاضر)</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <div class="modal fade" id="absentModal{{ s.id }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <form method="POST" action="{{ url_for('toggle_status', staff_id=s.id) }}">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title fw-bold">تسجيل غياب مؤطر — 28 نوفمبر 2026</h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p><strong>المعني:</strong> {{ s.last_name_ar }} {{ s.first_name_ar }} ({{ s.role_title }} — {{ s.office_name }})</p>
+                                    <input type="hidden" name="status" value="غائب">
+                                    <input type="hidden" name="current_office" value="{{ office_filter }}">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">سبب الغياب:</label>
+                                        <input type="text" name="absence_reason" class="form-control" placeholder="مثال: مرضي، ظرف طارئ، عدم الالتحاق...">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">اسم المستخلف / البديل (إن وجد):</label>
+                                        <input type="text" name="replacement_name" class="form-control" placeholder="اللقب والاسم للمستخلف...">
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                                    <button type="submit" class="btn btn-danger fw-bold">تأكيد وإرسال التقرير</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% else %}
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card p-3 text-center">
+            <span class="text-muted small fw-bold">مجموع المصوتين (09:30)</span>
+            <h3 class="fw-bold mb-0 mt-1 text-primary">{{ center_turnout_totals.voters_0930 }}</h3>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card p-3 text-center" style="border-top-color:#0ea5e9;">
+            <span class="text-muted small fw-bold">مجموع المصوتين (14:00)</span>
+            <h3 class="fw-bold mb-0 mt-1 text-info">{{ center_turnout_totals.voters_1400 }}</h3>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card gold-accent p-3 text-center">
+            <span class="text-muted small fw-bold">مجموع المصوتين (17:00)</span>
+            <h3 class="fw-bold mb-0 mt-1 text-warning">{{ center_turnout_totals.voters_1700 }}</h3>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card p-3 text-center" style="border-top-color:#16a34a;">
+            <span class="text-muted small fw-bold">مجموع المصوتين (19:00)</span>
+            <h3 class="fw-bold mb-0 mt-1 text-success">{{ center_turnout_totals.voters_1900 }}</h3>
+        </div>
+    </div>
+</div>
+
+<div class="card p-3">
+    <div class="alert alert-warning-soft small mb-3">
+        <strong>إرشاد التسجيل:</strong> يُدخل عدد المصوتين التراكمي لكل مكتب في المواقيت الأربعة (<strong>09:30</strong>، <strong>14:00</strong>، <strong>17:00</strong>، <strong>19:00</strong>) ثم يُضغط على زر <strong>حفظ</strong> مقابل المكتب.
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-bordered align-middle text-center">
+            <thead class="table-light">
+                <tr>
+                    <th class="text-end">المكتب</th>
+                    <th>المصوتون<br><span class="badge bg-primary">09:30</span></th>
+                    <th>المصوتون<br><span class="badge bg-info text-dark">14:00</span></th>
+                    <th>المصوتون<br><span class="badge bg-warning text-dark">17:00</span></th>
+                    <th>المصوتون<br><span class="badge bg-success">19:00</span></th>
+                    <th>آخر تحديث</th>
+                    <th>حفظ</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in turnout_list %}
+                <tr>
+                    <td class="fw-bold text-end">{{ t.office_name }}</td>
+                    <td>
+                        <form id="turnoutForm{{ t.id }}" method="POST" action="{{ url_for('update_turnout', turnout_id=t.id) }}"></form>
+                        <input type="number" min="0" name="voters_0930" value="{{ t.voters_0930 }}" form="turnoutForm{{ t.id }}"
+                               class="form-control form-control-sm text-center mx-auto" style="max-width:105px;">
+                    </td>
+                    <td>
+                        <input type="number" min="0" name="voters_1400" value="{{ t.voters_1400 }}" form="turnoutForm{{ t.id }}"
+                               class="form-control form-control-sm text-center mx-auto" style="max-width:105px;">
+                    </td>
+                    <td>
+                        <input type="number" min="0" name="voters_1700" value="{{ t.voters_1700 }}" form="turnoutForm{{ t.id }}"
+                               class="form-control form-control-sm text-center mx-auto" style="max-width:105px;">
+                    </td>
+                    <td>
+                        <input type="number" min="0" name="voters_1900" value="{{ t.voters_1900 }}" form="turnoutForm{{ t.id }}"
+                               class="form-control form-control-sm text-center mx-auto" style="max-width:105px;">
+                    </td>
+                    <td class="small text-muted">{{ t.updated_at or '-' }}</td>
+                    <td>
+                        <button type="submit" form="turnoutForm{{ t.id }}" class="btn btn-sm btn-success fw-bold px-3">حفظ</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
